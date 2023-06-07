@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta charset="UTF-8">
+    <style>
+        #canvas {
+            font-size: 0;
+        }
+
+        .pixel {
+            width: 18px;
+            height: 18px;
+            background-color: white;
+            border: 1px solid #ccc;
+            display: inline-block;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pixel:hover {
+            background-color: #ddd;
+        }
+
+        .button {
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>手写数字识别</h2>
+    <div id="canvas">
+        <!-- 生成32x32像素的手写板 -->
+        <!-- 每个像素块都有一个唯一的id，格式为"pixel-x-y"，其中x和y是像素的坐标 -->
+        <!-- 默认情况下，所有像素块都是白色的 -->
+        <!-- 用户可以通过点击或拖动鼠标来改变像素的颜色 -->
+        
+        <script>
+            var isDrawing = false;
+
+            function startDrawing() {
+                isDrawing = true;
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            function togglePixelColor(pixelId) {
+                if (isDrawing) {
+                    var pixel = document.getElementById(pixelId);
+                    pixel.style.backgroundColor = "black";
+                    pixel.removeAttribute("onclick");
+                    pixel.removeAttribute("onmouseover");
+                }
+            }
+
+            for (var i = 0; i < 32; i++) {
+                document.write('<div>');
+                for (var j = 0; j < 32; j++) {
+                    document.write('<div id="pixel-' + i + '-' + j + '" class="pixel" onmousedown="startDrawing()" onmouseup="stopDrawing()" onmouseover="togglePixelColor(\'' + 'pixel-' + i + '-' + j + '\')"></div>');
+                }
+                document.write('</div>');
+            }
+        </script>
+    </div>
+    <button class="button" onclick="clearCanvas(event)">清除</button>
+    <button class="button" onclick="recognizeDigit()">识别</button>
+
+    <div id="result"></div>
+
+    <script>
+        // JavaScript代码可用于处理用户的交互操作和数字识别
+
+        // 数字识别模型的函数
+        function recognizeDigit() {
+            // 获取手写板上的颜色数据
+            var data = [];
+            for (var i = 0; i < 32; i++) {
+                data[i] = [];
+                for (var j = 0; j < 32; j++) {
+                    var pixel = document.getElementById("pixel-" + i + "-" + j);
+                    var color = pixel.style.backgroundColor === "black" ? 1 : 0;
+                    data[i][j] = color;
+                }
+            }
+
+            // 使用Ajax请求将data数组内容发送给Python代码
+            $.ajax({
+                type: "POST",
+                url: "{% url 'process_data' %}",  // 替换为你的Django视图函数的URL
+                data: JSON.stringify(data),
+                contentType: "application/json",
+                success: function(response) {
+                    var resultElement = document.getElementById("result");
+                    resultElement.innerText = "识别结果：" + response.result;
+                },
+                error: function(error) {
+                  // 在发生错误时处理错误信息
+                  console.log(error);
+                }
+            });
+        }
+
+        // 清除手写板
+        function clearCanvas(event) {
+            // 如果鼠标事件的目标是按钮本身，则执行清除操作
+            if (event.target === event.currentTarget) {
+                var pixels = document.getElementsByClassName("pixel");
+                for (var i = 0; i < pixels.length; i++) {
+                    pixels[i].style.backgroundColor = "white";
+                    pixels[i].setAttribute("onclick", "togglePixelColor('" + pixels[i].id + "')");
+                    pixels[i].setAttribute("onmouseover", "togglePixelColor('" + pixels[i].id + "')");
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
